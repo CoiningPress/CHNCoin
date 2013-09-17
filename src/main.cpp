@@ -874,15 +874,32 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
         return nProofOfWorkLimit;
 
     // CHNCoin difficulty adjustment protocol switch
-    static const int nDifficultySwitchHeight = 60500;
+    int64 nDiffSwitchTime = 1380585600; //Oct 1, 2013
     int nHeight = pindexLast->nHeight + 1;
-    bool fNewDifficultyProtocol = (nHeight >= nDifficultySwitchHeight || fTestNet);
+    bool fNewDifficultyProtocol = (pindexLast->nTime >= nDiffSwitchTime || fTestNet);
 
     int64 nTargetTimespanCurrent = fNewDifficultyProtocol? nTargetTimespan : (nTargetTimespan*3.5);
     int64 nInterval = nTargetTimespanCurrent / nTargetSpacing;
+    
+    //After Oct 1, 2013 retarget every block with exponential moving toward target spacing
+    if (fNewDifficultyProtocol)
+    {
+    	int64 nActualSpacing = pindexLast->GetBlockTime() - pindexLast->pprev->GetBlockTime();
+    	
+    	CBigNum bnNew;
+    	bnNew.SetCompact(pindexLast->nBits);
+    	
+    	bnNew *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
+    	bnNew /= ((nInterval + 1) * nTargetSpacing);
+
+    	if (bnNew > bnProofOfWorkLimit) 
+    	    bnNew = bnProofOfWorkLimit;
+
+    	return bnNew.GetCompact();
+    }
 
     // Only change once per interval, or at protocol switch height
-    if ((nHeight % nInterval != 0) && (nHeight != nDifficultySwitchHeight || fTestNet))
+    if ((nHeight % nInterval != 0) && (pindex->nTime < nDiffSwithcTime || fTestNet))
     {
         // Special difficulty rule for testnet:
         if (fTestNet)
@@ -919,8 +936,8 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
     // Limit adjustment step to 150% (400% before protocol switch)
     int64 nActualTimespan = pindexLast->GetBlockTime() - pindexFirst->GetBlockTime();
     printf("  nActualTimespan = %"PRI64d"  before bounds\n", nActualTimespan);
-    int64 nActualTimespanMax = fNewDifficultyProtocol? ((nTargetTimespanCurrent*3)/2) : (nTargetTimespanCurrent*4);
-    int64 nActualTimespanMin = fNewDifficultyProtocol? ((nTargetTimespanCurrent*2)/3) : (nTargetTimespanCurrent/4);
+    int64 nActualTimespanMax = nTargetTimespanCurrent*4;
+    int64 nActualTimespanMin = nTargetTimespanCurrent/4;
     if (nActualTimespan < nActualTimespanMin)
         nActualTimespan = nActualTimespanMin;
     if (nActualTimespan > nActualTimespanMax)
