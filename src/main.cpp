@@ -899,7 +899,7 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
     }
 
     // Only change once per interval, or at protocol switch height
-    if ((nHeight % nInterval != 0) && (pindex->nTime < nDiffSwithcTime || fTestNet))
+    if ((nHeight % nInterval != 0) && (pindex->nTime < nDiffSwitchTime || fTestNet))
     {
         // Special difficulty rule for testnet:
         if (fTestNet)
