@@ -884,6 +884,12 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
     //After Oct 1, 2013 retarget every block with exponential moving toward target spacing
     if (fNewDifficultyProtocol)
     {
+	if (pindexLast->pprev == NULL)
+        	return nProofOfWorkLimit; // first block
+    
+    	if (pindexLast->pprev->pprev == NULL)
+        	return nProofOfWorkLimit; // second block
+
     	int64 nActualSpacing = pindexLast->GetBlockTime() - pindexLast->pprev->GetBlockTime();
     	
     	CBigNum bnNew;
@@ -899,7 +905,7 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
     }
 
     // Only change once per interval, or at protocol switch height
-    if ((nHeight % nInterval != 0) && (pindex->nTime < nDiffSwitchTime || fTestNet))
+    if ((nHeight % nInterval != 0) && (pindexLast->nTime < nDiffSwitchTime || fTestNet))
     {
         // Special difficulty rule for testnet:
         if (fTestNet)
