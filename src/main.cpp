@@ -874,21 +874,18 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
         return nProofOfWorkLimit;
 
     // CHNCoin difficulty adjustment protocol switch
-    int64 nDiffSwitchTime = 1380585600; //Oct 1, 2013
+    int64 nDiffSwitchBlock = 59749;
     int nHeight = pindexLast->nHeight + 1;
-    bool fNewDifficultyProtocol = (pindexLast->nTime >= nDiffSwitchTime || fTestNet);
+    bool fNewDifficultyProtocol = (nHeight >= nDiffSwitchBlock || fTestNet);
 
     int64 nTargetTimespanCurrent = fNewDifficultyProtocol? nTargetTimespan : (nTargetTimespan*3.5);
     int64 nInterval = nTargetTimespanCurrent / nTargetSpacing;
     
-    //After Oct 1, 2013 retarget every block with exponential moving toward target spacing
+    //Starting at block 59749 retarget every block with exponential moving toward target spacing
     if (fNewDifficultyProtocol)
     {
-	if (pindexLast->pprev == NULL)
-        	return nProofOfWorkLimit; // first block
-    
-    	if (pindexLast->pprev->pprev == NULL)
-        	return nProofOfWorkLimit; // second block
+        if (nHeight == nDiffSwitchBlock)
+            return (bnProofOfWorkLimit).GetCompact(); // mindiff for the first block after retarget change
 
     	int64 nActualSpacing = pindexLast->GetBlockTime() - pindexLast->pprev->GetBlockTime();
     	
@@ -905,7 +902,7 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
     }
 
     // Only change once per interval, or at protocol switch height
-    if ((nHeight % nInterval != 0) && (pindexLast->nTime < nDiffSwitchTime || fTestNet))
+    if ((nHeight % nInterval != 0) && (nHeight < nDiffSwitchBlock || fTestNet))
     {
         // Special difficulty rule for testnet:
         if (fTestNet)
